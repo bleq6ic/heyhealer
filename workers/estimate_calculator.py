@@ -106,9 +106,18 @@ class EstimateCalculator(QThread):
     # dataframe 타입으로 반환.
 
     def extractHeydealerDB(self):
+        # 사용자 설정.
+        min_mileage_limit = 2 # 주행거리 간격 설정 (낮은 주행거리)
+        max_mileage_limit = 2 # 주행거리 간격 설정 (많은 주행거리)
+
+        min_budder_count = 5 # 입찰자 수 제한 (입찰자 수가 해당 변수값보다 작으면 검색하지 않음)
+        not_search_changed_car = False # 완전무사고 차량을 검색할 때, 단순교환 차량을 검색하지 않는다.
+        not_search_accident_car = True # 유사고 차량을 검색하지 않습니다.
+        
+        
+        
         # 카테고리 데이터를 불러온다.
         # 카테고리 데이터에서 get 코드를 추가한다.
-
         database_data = None
         db = pymysql.connect(host='grdver.xyz',
                              port=3306,
@@ -152,14 +161,23 @@ class EstimateCalculator(QThread):
         url += '&' + pd_db_data['model_group_code'][grade_index]
         url += '&' + pd_db_data['model_code'][grade_index]
         url += '&' + pd_db_data['grade_code'][grade_index]
-        url += '&years=' + str(self.car_data['car_years'])
+        if self.car_data['car_years'] > self.car_data['years']:
+            url += '&years=' + str(self.car_data['car_years'])
+            url += '&years=' + str(self.car_data['years'])
+        elif self.car_data['car_years'] == self.car_data['years']:
+            url += '&years=' + str(self.car_data['car_years'])
+            url += '&years=' + str(self.car_data['years'] - 1)
+        elif self.car_data['car_years'] < self.car_data['years']:
+            url += '&years=' + str(self.car_data['car_years'])
+
         #years_plus_one = self.car_data['years'] + 1
         # if years_plus_one <= datetime.now().year:
         #    url += '&years=' + str(years_plus_one)
-        min_mileage = int(round(float(self.car_data['mileage']) * 0.0001) - 2)
+
+        min_mileage = int(round(float(self.car_data['mileage']) * 0.0001) - min_mileage_limit)
         if min_mileage < 0:
             min_mileage = 0
-        max_mileage = int(round(float(self.car_data['mileage']) * 0.0001) + 2)
+        max_mileage = int(round(float(self.car_data['mileage']) * 0.0001) + max_mileage_limit)
         url += '&min_mileage=' + str(min_mileage)
         url += '&max_mileage=' + str(max_mileage)
         self.driver.get(url)
@@ -321,8 +339,8 @@ class EstimateCalculator(QThread):
                 if car_data['grade'] != self.car_data['grade']:
                     is_append = False
 
-                # 차량 연식이 낮은 차량은 제외.
-                if car_data['car_years'] < self.car_data['car_years']:
+                # 차량 연식이 맞지 않는 차량 제외.
+                if car_data['car_years'] != self.car_data['car_years']:
                     is_append = False
 
                 # 옵션 다른 차량은 제외.
@@ -336,27 +354,22 @@ class EstimateCalculator(QThread):
                         is_append = False
 
                 # 유사고 차량 제외.
-                if car_data['accident'] == "유사고":
-                    is_append = False
-
-                # 입찰자 수 기준치 이하 삭제. (10명 이하)
-                # 선택가가 0 인 자료는 입찰자 수 10명 이하 제한
-                # 선택가가 있는 자료는 신뢰성이 있음.
-                # 선태가가 없는 자료는 입찰자 수가 10명이상인 자료가 신뢰성이 있음.
-                if car_data['selective_price'] == 0:
-                    if car_data['bidder'] < 6:
+                if not_search_accident_car: # 유사고 차량을 검색하지 않는 변수가 참이라면...
+                    if car_data['accident'] == "유사고":
                         is_append = False
 
-                if len(car_data) > 5:
-                    if self.car_data['accident'] == "완전무사고":
+                # 입찰자 수 기준치 이하 삭제.
+                if car_data['bidder'] < min_budder_count:
+                    is_append = False
+
+                if self.car_data['accident'] == "완전무사고":
+                    if not_search_changed_car: # 완전무사고 차량일 경우 단순교환 차량을 검색하지 않는다면...
                         if car_data['accident'] == "단순교환":
                             is_append = False
 
                 if is_append:
                     car_list.append(car_data)
 
-        #test_df_datas = pd.DataFrame(car_list)
-        # display(test_df_datas)
         return car_list
 
     def extractHealerDB(self):
