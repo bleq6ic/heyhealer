@@ -107,15 +107,13 @@ class EstimateCalculator(QThread):
 
     def extractHeydealerDB(self):
         # 사용자 설정.
-        min_mileage_limit = 2 # 주행거리 간격 설정 (낮은 주행거리)
-        max_mileage_limit = 2 # 주행거리 간격 설정 (많은 주행거리)
+        min_mileage_limit = 2  # 주행거리 간격 설정 (낮은 주행거리)
+        max_mileage_limit = 2  # 주행거리 간격 설정 (많은 주행거리)
 
-        min_budder_count = 5 # 입찰자 수 제한 (입찰자 수가 해당 변수값보다 작으면 검색하지 않음)
-        not_search_changed_car = False # 완전무사고 차량을 검색할 때, 단순교환 차량을 검색하지 않는다.
-        not_search_accident_car = True # 유사고 차량을 검색하지 않습니다.
-        
-        
-        
+        min_budder_count = 5  # 입찰자 수 제한 (입찰자 수가 해당 변수값보다 작으면 검색하지 않음)
+        not_search_changed_car = False  # 완전무사고 차량을 검색할 때, 단순교환 차량을 검색하지 않는다.
+        not_search_accident_car = True  # 유사고 차량을 검색하지 않습니다.
+
         # 카테고리 데이터를 불러온다.
         # 카테고리 데이터에서 get 코드를 추가한다.
         database_data = None
@@ -174,10 +172,12 @@ class EstimateCalculator(QThread):
         # if years_plus_one <= datetime.now().year:
         #    url += '&years=' + str(years_plus_one)
 
-        min_mileage = int(round(float(self.car_data['mileage']) * 0.0001) - min_mileage_limit)
+        min_mileage = int(
+            round(float(self.car_data['mileage']) * 0.0001) - min_mileage_limit)
         if min_mileage < 0:
             min_mileage = 0
-        max_mileage = int(round(float(self.car_data['mileage']) * 0.0001) + max_mileage_limit)
+        max_mileage = int(
+            round(float(self.car_data['mileage']) * 0.0001) + max_mileage_limit)
         url += '&min_mileage=' + str(min_mileage)
         url += '&max_mileage=' + str(max_mileage)
         self.driver.get(url)
@@ -354,7 +354,7 @@ class EstimateCalculator(QThread):
                         is_append = False
 
                 # 유사고 차량 제외.
-                if not_search_accident_car: # 유사고 차량을 검색하지 않는 변수가 참이라면...
+                if not_search_accident_car:  # 유사고 차량을 검색하지 않는 변수가 참이라면...
                     if car_data['accident'] == "유사고":
                         is_append = False
 
@@ -363,7 +363,7 @@ class EstimateCalculator(QThread):
                     is_append = False
 
                 if self.car_data['accident'] == "완전무사고":
-                    if not_search_changed_car: # 완전무사고 차량일 경우 단순교환 차량을 검색하지 않는다면...
+                    if not_search_changed_car:  # 완전무사고 차량일 경우 단순교환 차량을 검색하지 않는다면...
                         if car_data['accident'] == "단순교환":
                             is_append = False
 
@@ -455,7 +455,8 @@ class EstimateCalculator(QThread):
         self.soup = BeautifulSoup(page, 'html.parser')
 
         #WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//button[@class="css-zh51te"]'))).click()
-        click_element = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//button[@class="css-zh51te"]')))
+        click_element = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, '//button[@class="css-zh51te"]')))
         self.driver.execute_script("arguments[0].click();", click_element)
         sleep(1)
 
@@ -489,10 +490,12 @@ class EstimateCalculator(QThread):
         """
 
         try:
+            """ 엔카 진단.
             WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
                 (By.XPATH, '//label[@for="warranty_1"]'))).click()
 
             sleep(1)
+            """
 
             WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
                 (By.XPATH, '//div[@class="fn_sort"]/a[2]'))).click()
@@ -565,7 +568,7 @@ class EstimateCalculator(QThread):
             if int(car_years.split('/')[0]) < int(str(self.car_data['years'])[2:4]):
                 check_car_years = True
 
-            #역각자.
+            # 역각자.
             if self.car_data['car_years'] < self.car_data['years']:
                 if int(car_years.split('/')[0]) == int(str(self.car_data['car_years'])[2:4]):
                     check_car_years = False
@@ -597,57 +600,141 @@ class EstimateCalculator(QThread):
                     (By.XPATH, '''//div[@class="article article_inspect areaScrollCheck"]'''))).get_attribute('innerHTML')
                 car_acc_soup = BeautifulSoup(car_acc_page, 'html.parser')
 
+                # 엔카진단.
+                accident_text = car_acc_soup.select_one('em.emph_g').get_text()
+                if accident_text != "무사고 차량":
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    self.driver.close()
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    continue
+
+                changed_element = car_acc_soup.select_one(
+                    'ul.list_append > li:nth-child(1) > div.info_append > ul.detail_append > li:nth-child(1) > span.txt_g')
+                sheeting_element = car_acc_soup.select_one(
+                    'ul.list_append > li:nth-child(1) > div.info_append > ul.detail_append > li:nth-child(2) > span.txt_g')
+                corrosion_element = car_acc_soup.select_one(
+                    'ul.list_append > li:nth-child(1) > div.info_append > ul.detail_append > li:nth-child(3) > span.txt_g')
+
+                if changed_element == None:
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    self.driver.close()
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    continue
+
+                changed_text = changed_element.get_text()
+                sheeting_text = sheeting_element.get_text()
+                corrosion_text = corrosion_element.get_text()
+
+                changed_count = int(re.sub(
+                    r'[^0-9]', '', changed_text)) if re.sub(r'[^0-9]', '', changed_text) != '' else 0
+                if changed_count > 2:
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    self.driver.close()
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    continue
+
             except:
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                self.driver.close()
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                continue
 
-            accident_text = car_acc_soup.select_one('em.emph_g').get_text()
-            if accident_text != "무사고 차량":
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                self.driver.close()
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                continue
+                try:  # 엔카 진단 외
+                    car_acc_page = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
+                        (By.XPATH, '''//*[@id="areaPerformance"]'''))).get_attribute('innerHTML')
+                    car_acc_soup = BeautifulSoup(car_acc_page, 'html.parser')
 
-            changed_element = car_acc_soup.select_one(
-                'ul.list_append > li:nth-child(1) > div.info_append > ul.detail_append > li:nth-child(1) > span.txt_g')
-            sheeting_element = car_acc_soup.select_one(
-                'ul.list_append > li:nth-child(1) > div.info_append > ul.detail_append > li:nth-child(2) > span.txt_g')
-            corrosion_element = car_acc_soup.select_one(
-                'ul.list_append > li:nth-child(1) > div.info_append > ul.detail_append > li:nth-child(3) > span.txt_g')
+                    accident_text = car_acc_soup.select_one('#txtInspAcc').get_text()
+                    
+                    if accident_text.find("없음") == -1:
+                        self.driver.switch_to.window(
+                            self.driver.window_handles[-1])
+                        sleep(1)
+                        self.driver.close()
+                        self.driver.switch_to.window(
+                            self.driver.window_handles[-1])
+                        sleep(1)
+                        continue
 
-            if changed_element == None:
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                self.driver.close()
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                continue
+                    changed_element = car_acc_soup.select_one(
+                        '#wrapInsp > div.detail_inspection_info > dl:nth-child(1) > dd > div > span:nth-child(1)')
+                    sheeting_element = car_acc_soup.select_one(
+                        '#wrapInsp > div.detail_inspection_info > dl:nth-child(1) > dd > div > span:nth-child(2)')
+                    corrosion_element = car_acc_soup.select_one(
+                        '#wrapInsp > div.detail_inspection_info > dl:nth-child(1) > dd > div > span:nth-child(3)')
 
-            changed_text = changed_element.get_text()
-            sheeting_text = sheeting_element.get_text()
-            corrosion_text = corrosion_element.get_text()
+                    if changed_element == None:
+                        self.driver.switch_to.window(
+                            self.driver.window_handles[-1])
+                        sleep(1)
+                        self.driver.close()
+                        self.driver.switch_to.window(
+                            self.driver.window_handles[-1])
+                        sleep(1)
+                        continue
 
-            changed_count = int(re.sub(
-                r'[^0-9]', '', changed_text)) if re.sub(r'[^0-9]', '', changed_text) != '' else 0
-            if changed_count > 2:
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                self.driver.close()
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                continue
+                    changed_text = changed_element.get_text()
+                    sheeting_text = sheeting_element.get_text()
+                    corrosion_text = corrosion_element.get_text()
+
+                    changed_text = changed_text.split(':')[1].strip()
+                    sheeting_text = sheeting_text.split(':')[1].strip()
+                    corrosion_text = corrosion_text.split(':')[1].strip()
+
+                    changed_count = int(re.sub(
+                        r'[^0-9]', '', changed_text)) if re.sub(r'[^0-9]', '', changed_text) != '' else 0
+                    if changed_count > 2:
+                        self.driver.switch_to.window(
+                            self.driver.window_handles[-1])
+                        sleep(1)
+                        self.driver.close()
+                        self.driver.switch_to.window(
+                            self.driver.window_handles[-1])
+                        sleep(1)
+                        continue
+
+                except:
+
+                    self.driver.switch_to.window(self.driver.window_handles[-1])
+                    sleep(1)
+                    self.driver.close()
+                    self.driver.switch_to.window(self.driver.window_handles[-1])
+                    sleep(1)
+                    continue
+
 
             # 보험 이력 조회.
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
-                (By.XPATH, '''//ul[@class="list_keyinfo"]/li[2]/a[@class="link_g"]'''))).click()
+            try:
+                # 엔카진단 전용.
+                WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
+                    (By.XPATH, '''//ul[@class="list_keyinfo"]/li[2]/a[@class="link_g"]'''))).click()
 
-            sleep(1)
+                sleep(1)
+            except:
+                try:
+                    # 엔카진단 외 차량.
+                    record_click_element = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
+                        (By.XPATH, '''//*[@id="areaBase"]/div[3]/div/div[1]/div[2]/ul/li[2]/div/a''')))
+                    self.driver.execute_script(
+                        "arguments[0].click();", record_click_element)
+                    sleep(1)
+                except:
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    self.driver.close()
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    sleep(1)
+                    continue
 
             # 보험 이력 조회 새창 열림.
             # 새창으로 전환.
@@ -664,7 +751,7 @@ class EstimateCalculator(QThread):
 
                 record_text = record_element.get_text().replace(' ', '')
             except:
-                #조회불가차량 오류.
+                # 조회불가차량 오류.
                 # 보험 이력 조회 새창 닫기.
                 self.driver.switch_to.window(self.driver.window_handles[-1])
                 sleep(1)
@@ -711,24 +798,33 @@ class EstimateCalculator(QThread):
             car_brand = car_name_brand_element.get_text()
             car_detail = car_name_detail_element.get_text()
             car_detail = car_detail.strip()
-            
 
-            car_info_page = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
-                (By.XPATH, '//*[@id="carPic"]/div[1]'))).get_attribute('innerHTML')
-            info_soup = BeautifulSoup(car_info_page, 'html.parser')
+            try:
+                car_info_page = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+                    (By.XPATH, '//*[@id="carPic"]/div[1]'))).get_attribute('innerHTML')
+                info_soup = BeautifulSoup(car_info_page, 'html.parser')
 
-            info_eles = info_soup.select('ul.list_carinfo > li')
+                info_eles = info_soup.select('ul.list_carinfo > li')
 
-            for i, v in enumerate(info_eles):
-                if i == 0:
-                    mileage = int(re.sub(r'[^0-9]', '', v.get_text()))
+                for i, v in enumerate(info_eles):
+                    if i == 0:
+                        mileage = int(re.sub(r'[^0-9]', '', v.get_text()))
 
-                if i == 1:
-                    years = re.sub(r'[^0-9]', '', v.get_text())[0:2]
-                    month = re.sub(r'[^0-9]', '', v.get_text())[2:4]
+                    if i == 6:
+                        color = v.get_text().split('색상:')[1]
+            except:
+                car_info_page = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+                    (By.XPATH, '//*[@id="areaBase"]/div[2]/div[1]/div[2]'))).get_attribute('innerHTML')
+                info_soup = BeautifulSoup(car_info_page, 'html.parser')
 
-                if i == 6:
-                    color = v.get_text().split('색상:')[1]
+                info_eles = info_soup.select('ul > li')
+
+                for i, v in enumerate(info_eles):
+                    if i == 0:
+                        mileage = int(re.sub(r'[^0-9]', '', v.get_text()))
+
+                    if i == 6:
+                        color = v.get_text().split('색상:')[1]
 
             # 추가옵션.
             add_options = ""
@@ -773,7 +869,7 @@ class EstimateCalculator(QThread):
                 add_options = "------------------------------------\n" + \
                     add_option_price_text + " 상당의 선택옵션 장착\n" + add_options_text
             except:
-                pass
+                add_options = "추가 옵션 정보가 없는 엔카 매물입니다"
 
             self.driver.switch_to.window(self.driver.window_handles[-1])
             sleep(1)

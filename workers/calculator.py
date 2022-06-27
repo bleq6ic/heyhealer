@@ -14,81 +14,6 @@ from workers.databaser import MySQL
 
 class EstimateCalculators(QObject):
 
-    # ver1
-
-    def hdCalculatorVer1(self, curr_car_data, data_list):
-
-        if len(data_list) == 0:
-            return 0
-
-        
-        # 공통 예상가 입력.
-        for i, v in enumerate(data_list):
-            v['estimate_price'] = v['selective_price'] if v['selective_price'] != 0 else v['max_price']
-
-        # 수입차/국산차 구분.
-        is_imported = self.isImported(curr_car_data)
-
-        # 점수 적용.
-        # 점수 적용은 차이가 나는 차량을 리스트에서 제외하기 위함.
-        for i, v in enumerate(data_list):
-
-            mileage_score = round((curr_car_data['mileage'] - v['mileage']) * 0.01)
-            years_score = (curr_car_data['years'] - v['years']) * 100
-            opt_score = 0
-
-            if is_imported:
-                curr_car_opt = json.loads(v['json_options'])
-                my_opt = json.loads(curr_car_data['json_options'])
-                opt_score = (len(curr_car_opt['옵션']) - len(my_opt['옵션'])) * 50
-
-            v['score'] = mileage_score + years_score + opt_score
-
-        new_data_list = []
-        for i, v in enumerate(data_list):
-            if v['score'] < -150:
-                continue
-
-            new_data_list.append(data_list[i])
-
-        # 데이터가 3개 이하일 때, 유효한 데이터가 2개 이상일 때 적용.
-        if len(new_data_list) <= 3:
-        
-            valid_count = 0
-            for i, v in enumerate(new_data_list):
-                if v['score'] <= 50:
-                    valid_count += 1
-
-            if valid_count < 3:
-                return 0
-
-        df_data_list = pd.DataFrame(new_data_list)
-        
-        # 낮은 가격 순으로 정렬.
-        df_data_list = df_data_list.sort_values('estimate_price')
-        data_list = df_data_list.to_dict('records')
-
-        # 최저가 데이터가 최초등록일(년) 차이가 난다면 예상가 감가 적용.
-        # 주행거리에 대한 가격 감가 적용.
-
-        same_color_count = 0
-        min_color_index = None
-        for i, v in enumerate(data_list):
-            if v['color'] == curr_car_data['color']:
-                same_color_count += 1
-
-                if min_color_index == None:
-                    min_color_index = i
-
-        if same_color_count > 3:
-            if data_list[min_color_index]['estimate_price'] - data_list[0]['estimate_price'] < 100:
-                return data_list[min_color_index]['estimate_price']
-
-        try:
-            print(data_list[0]['grade'] + " : " + str(data_list[0]['estimate_price']))
-            return data_list[0]['estimate_price']
-        except:
-            return 0
 
     # ver3 (데이터베이스 활용)
 
@@ -202,10 +127,16 @@ class EstimateCalculators(QObject):
             return 0
      
 
+    def hdCalcualtorVer1(self, car_data, data_list):
+        color_db = MySQL().selectWhereColumn('colors', 'detail_color', car_data['detail_color'])
+        if len(color_db) > 0:
+            car_data['color'] = color_db[0]['normal_color']
+        
+
     # ver2
     def hdCalculatorVer2(self, car_data, data_list):
 
-        if len(data_list) < 3:
+        if len(data_list) < 1:
             return 0
 
         # 수입차/국산차 구분.
@@ -267,7 +198,8 @@ class EstimateCalculators(QObject):
         df_data_list = pd.DataFrame(data_list)
         
         # 낮은 가격 순으로 정렬.
-        df_data_list = df_data_list.sort_values('max_price')
+        if len(df_data_list) > 1:
+            df_data_list = df_data_list.sort_values('max_price')
         data_list = df_data_list.to_dict('records')
 
         new_data_list = []
