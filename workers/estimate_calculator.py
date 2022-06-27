@@ -503,10 +503,18 @@ class EstimateCalculator(QThread):
 
         try:
             if is_imported == False:
-                WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
-                    (By.XPATH, '//label[@for="warranty_1"]'))).click()
 
-                sleep(1)
+                try:
+                    element_count = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="warranty"]/div/ul/li[2]/div/em')))
+                    element_int = int(re.sub('[^0-9]', '', element_count.text))
+                    if element_int > 0:
+
+                        WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
+                            (By.XPATH, '//label[@for="warranty_1"]'))).click()
+
+                        sleep(1)
+                except:
+                    pass
 
             WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
                 (By.XPATH, '//div[@class="fn_sort"]/a[2]'))).click()
