@@ -128,9 +128,20 @@ class EstimateCalculators(QObject):
      
 
     def hdCalcualtorVer1(self, car_data, data_list):
+
+        if len(data_list) == 0:
+            return None
+
         color_db = MySQL().selectWhereColumn('colors', 'detail_color', car_data['detail_color'])
         if len(color_db) > 0:
             car_data['color'] = color_db[0]['normal_color']
+
+        df_data_list = pd.DataFrame(data_list)
+        df_data_list = df_data_list.sort_values('max_price')
+        data_list = df_data_list.to_dict('records')
+
+        return data_list[0]
+
         
 
     # ver2

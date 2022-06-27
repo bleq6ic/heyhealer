@@ -77,23 +77,28 @@ class EstimateCalculator(QThread):
             else:
                 estimate_price = estimate_price_test1
 
-            e_price_test1_text = "1) " + \
-                str(estimate_price_test1) + \
-                " 만원" if estimate_price_test1 > 0 else "1) 비교대상 부족"
-            e_price_test2_text = "2) " + \
-                str(estimate_price_test2) + \
-                " 만원" if estimate_price_test2 > 0 else "2) 비교대상 부족"
+            if len(data_list) > 0:
+                low_data = data_list[0]
+                heydealer_low_price_text = "1) " + str(low_data['max_price']) + " 만원 (매입시세 최저가)\n" + str(low_data['bidder']) + " 명 입찰 (" + str(len(data_list)) + " 개의 데이터 중 최저가)\n" + str(low_data['years']) + "/" + str(low_data['month']) + " (" + str(low_data['car_years']) + "), " + str(low_data['mileage']) + " km, " + str(low_data['color']) + "\n" + str(low_data['accident']) + "\n\n"
+            else:
+                heydealer_low_price_text = "검색된 매물 0 개\n"
 
-            encar_price_text = "3) " + str(encar_low['price']) + " 만원 (엔카 최저가)\n---------- 엔카 최저가 정보 ----------\n" + str(encar_low['car_detail']) + "\n" + str(
+            e_price_test1_text = "1) " + str(estimate_price_test1) + " 만원" if estimate_price_test1 > 0 else "1) 비교대상 부족"
+            e_price_test2_text = "2) " + str(estimate_price_test2) + " 만원" if estimate_price_test2 > 0 else "2) 비교대상 부족"
+
+            encar_price_text = "2) " + str(encar_low['price']) + " 만원 (엔카 최저가)\n" + str(encar_low['car_detail']) + "\n" + str(
                 encar_low['car_years']) + " , " + str(encar_low['mileage']) + " km, " + str(encar_low['color']) + "\n" + "교환: " + str(
-                    encar_low['changed']) + ", 판금: " + str(encar_low['sheeting']) + ", 부식: " + str(encar_low['corrosion']) + "\n내차피해액 : " + str(encar_low['my_car_damaged']) + " 원\n" + str(encar_low['add_options']) + "\n" if encar_low != None else "비교 대상 부족 (엔카 최저가)"
+                    encar_low['changed']) + ", 판금: " + str(encar_low['sheeting']) + ", 부식: " + str(encar_low['corrosion']) + "\n내차피해액 : " + str(encar_low['my_car_damaged']) + " 원\n" + str(encar_low['add_options']) + "\n\n" if encar_low != None else "비교 대상 부족 (엔카 최저가)\n"
 
-            alert_text = "경고) 내차피해 총액 {} 만원 초과 \n".format(
+            alert_text = "경고) 내차피해 총액 {} 만원 초과 \n\n".format(
                 min_damage_price) if self.car_data['total_my_car_damage'] > min_damage_price else ""
 
-            e_text = alert_text + e_price_test1_text + \
-                " (헤이딜러 매입시세)\n" + e_price_test2_text + \
-                " (데이터베이스)\n" + encar_price_text
+            #e_price_test1_text + " (헤이딜러 매입시세 최저가)\n" + \
+            #e_price_test2_text + " (데이터베이스)\n" + \
+            e_text = alert_text + \
+                heydealer_low_price_text + \
+                encar_price_text + \
+                "입찰시 감가해야할 금액) " + str(self.deductor(self.car_data)) + " 만원\n"
 
             # url 차량 정보 윈도우에 예상가 표시.
             self.estimate_price_signal.emit(int(estimate_price))
@@ -369,6 +374,11 @@ class EstimateCalculator(QThread):
 
                 if is_append:
                     car_list.append(car_data)
+
+        if len(car_list) != 0:
+            df_data_list = pd.DataFrame(car_list)
+            df_data_list = df_data_list.sort_values('max_price')
+            car_list = df_data_list.to_dict('records')
 
         return car_list
 
