@@ -81,7 +81,7 @@ class EstimateCalculator(QThread):
                 low_data = data_list[0]
                 heydealer_low_price_text = "1) " + str(low_data['max_price']) + " 만원 (매입시세 최저가)\n" + str(low_data['bidder']) + " 명 입찰 (" + str(len(data_list)) + " 개의 데이터 중 최저가)\n" + str(low_data['years']) + "/" + str(low_data['month']) + " (" + str(low_data['car_years']) + "), " + str(low_data['mileage']) + " km, " + str(low_data['color']) + "\n" + str(low_data['accident']) + "\n\n"
             else:
-                heydealer_low_price_text = "검색된 매물 0 개\n"
+                heydealer_low_price_text = "1) 검색된 매물 0 개\n"
 
             e_price_test1_text = "1) " + str(estimate_price_test1) + " 만원" if estimate_price_test1 > 0 else "1) 비교대상 부족"
             e_price_test2_text = "2) " + str(estimate_price_test2) + " 만원" if estimate_price_test2 > 0 else "2) 비교대상 부족"
@@ -458,6 +458,8 @@ class EstimateCalculator(QThread):
 
     def extractEncar(self):
 
+        is_imported = self.isImported(self.car_data)
+
         self.driver.get(self.car_data['url'])
 
         page = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
@@ -500,12 +502,11 @@ class EstimateCalculator(QThread):
         """
 
         try:
-            """ 엔카 진단.
-            WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
-                (By.XPATH, '//label[@for="warranty_1"]'))).click()
+            if is_imported == False:
+                WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
+                    (By.XPATH, '//label[@for="warranty_1"]'))).click()
 
-            sleep(1)
-            """
+                sleep(1)
 
             WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
                 (By.XPATH, '//div[@class="fn_sort"]/a[2]'))).click()
