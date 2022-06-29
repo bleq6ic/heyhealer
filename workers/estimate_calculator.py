@@ -67,41 +67,47 @@ class EstimateCalculator(QThread):
             min_damage_price = 500
 
             # 예상가 산출.
+            """
             estimate_price_test1 = EstimateCalculators().hdCalculatorVer2(
                 self.car_data, data_list.copy()) - self.deductor(self.car_data)
             estimate_price_test2 = EstimateCalculators().hhCalculatorVer1(
                 self.car_data, healer_db_list.copy()) - self.deductor(self.car_data)
+            
 
             if estimate_price_test1 <= 0:
                 estimate_price = 0
             else:
                 estimate_price = estimate_price_test1
+            """
 
             if len(data_list) > 0:
                 low_data = data_list[0]
-                heydealer_low_price_text = "1) " + str(low_data['max_price']) + " 만원 (매입시세 최저가)\n" + str(low_data['bidder']) + " 명 입찰 (" + str(len(data_list)) + " 개의 데이터 중 최저가)\n" + str(low_data['years']) + "/" + str(low_data['month']) + " (" + str(low_data['car_years']) + "), " + str(low_data['mileage']) + " km, " + str(low_data['color']) + "\n" + str(low_data['accident']) + "\n\n"
+                heydealer_low_price_text = "1) " + str(low_data['max_price']) + " 만원 (헤이딜러 매입시세)\n" + str(low_data['bidder']) + " 명 입찰 (" + str(len(data_list)) + " 개의 데이터 중 최저가)\n" + str(low_data['years']) + "/" + str(low_data['month']) + " (" + str(low_data['car_years']) + "), " + str(low_data['mileage']) + " km, " + str(low_data['color']) + "\n" + str(low_data['accident']) + "\n\n"
             else:
-                heydealer_low_price_text = "1) 검색된 매물 0 개\n"
+                heydealer_low_price_text = "1) 검색된 매물 0 개 (헤이딜러 매입시세)\n"
 
-            e_price_test1_text = "1) " + str(estimate_price_test1) + " 만원" if estimate_price_test1 > 0 else "1) 비교대상 부족"
-            e_price_test2_text = "2) " + str(estimate_price_test2) + " 만원" if estimate_price_test2 > 0 else "2) 비교대상 부족"
 
-            encar_price_text = "2) " + str(encar_low['price']) + " 만원 (엔카 최저가)\n" + str(encar_low['car_detail']) + "\n" + str(
+            if len(healer_db_list) > 0:
+                db_low_data = healer_db_list[0]
+                new_price_text = str(db_low_data['car_new_price']) + " 만원" if db_low_data['car_new_price'] > 0 else "신차가격정보 없음"
+                heyhealer_low_price_text = "2) " + str(db_low_data['max_price']) + " 만원 (데이터베이스)\n" + "출고가(옵션포함) : " + new_price_text + "\n" + str(low_data['years']) + "/" + str(db_low_data['month']) + " (" + str(db_low_data['car_years']) + "), " + str(db_low_data['mileage']) + " km, " + str(db_low_data['color']) + "\n" + str(db_low_data['accident']) + "\n\n"
+            else:
+                heyhealer_low_price_text = "2) 검색된 매물 0 개 (데이터베이스)"
+
+            encar_price_text = "3) " + str(encar_low['price']) + " 만원 (엔카 최저가)\n" + str(encar_low['car_detail']) + "\n" + str(
                 encar_low['car_years']) + " , " + str(encar_low['mileage']) + " km, " + str(encar_low['color']) + "\n" + "교환: " + str(
-                    encar_low['changed']) + ", 판금: " + str(encar_low['sheeting']) + ", 부식: " + str(encar_low['corrosion']) + "\n내차피해액 : " + str(encar_low['my_car_damaged']) + " 원\n" + str(encar_low['add_options']) + "\n\n" if encar_low != None else "비교 대상 부족 (엔카 최저가)\n"
+                    encar_low['changed']) + ", 판금: " + str(encar_low['sheeting']) + ", 부식: " + str(encar_low['corrosion']) + "\n내차피해액 : " + str(encar_low['my_car_damaged']) + " 원\n" + str(encar_low['add_options']) + "\n\n" if encar_low != None else "3) 비교 대상 부족 (엔카 최저가)\n"
 
             alert_text = "경고) 내차피해 총액 {} 만원 초과 \n\n".format(
                 min_damage_price) if self.car_data['total_my_car_damage'] > min_damage_price else ""
 
-            #e_price_test1_text + " (헤이딜러 매입시세 최저가)\n" + \
-            #e_price_test2_text + " (데이터베이스)\n" + \
             e_text = alert_text + \
                 heydealer_low_price_text + \
                 encar_price_text + \
                 "입찰시 감가해야할 금액) " + str(self.deductor(self.car_data)) + " 만원\n"
 
             # url 차량 정보 윈도우에 예상가 표시.
-            self.estimate_price_signal.emit(int(estimate_price))
+            self.estimate_price_signal.emit(0)
             self.next_calculator_signal.emit(e_text)  # 다음 예측 단계로 넘어감.
 
             self.run_calculator = False
@@ -384,6 +390,14 @@ class EstimateCalculator(QThread):
 
     def extractHealerDB(self):
 
+        # 사용자 설정.
+        min_mileage_limit = 2  # 주행거리 간격 설정 (낮은 주행거리)
+        max_mileage_limit = 2  # 주행거리 간격 설정 (많은 주행거리)
+
+        min_budder_count = 5  # 입찰자 수 제한 (입찰자 수가 해당 변수값보다 작으면 검색하지 않음)
+        not_search_changed_car = False  # 완전무사고 차량을 검색할 때, 단순교환 차량을 검색하지 않는다.
+        not_search_accident_car = True  # 유사고 차량을 검색하지 않습니다.
+
         is_imported = self.isImported(self.car_data)
 
         db_datas = None
@@ -410,49 +424,28 @@ class EstimateCalculator(QThread):
         for index, value in enumerate(db_datas, start=0):
 
             # 유사고 차량 제외.
-            if value['accident'] == "유사고":
-                continue
-
-            if value['selective_price'] == 0:
-                if value['bidder'] < 6:
+            if not_search_accident_car:
+                if value['accident'] == "유사고":
                     continue
 
-            # 옵션 다른 차량은 제외.
-            json_curr_option = json.loads(self.car_data['json_options'])
-            #data_option_text = str(v['json_options']).replace('\\', '').replace('"{', '{').replace('}"', '}')
-            json_data_option = json.loads(value['json_options'])
-
-            if json_curr_option['전체옵션'] != json_data_option['전체옵션']:
-                continue
-
-            """
-            if is_imported:
-                if json_curr_option['옵션'] != json_data_option['옵션']:
-                    continue
-            """
-
-            # 국산차일 경우 신차가격이 250만원 이상 차이나면 비교가 힘드므로 삭제.
-            if is_imported == False:
-                # 비교 매물의 신차가격이 표기되어있다면...
-                if self.car_data['car_new_price'] != 0 and value['car_new_price'] != 0:
-                    dist_new_price = abs(
-                        self.car_data['car_new_price'] - value['car_new_price'])
-                    if dist_new_price > 250:
+            if not_search_changed_car:
+                if self.car_data['accident'] == "완전무사고":
+                    if value['accident'] == "단순교환":
                         continue
 
-            if value['mileage'] > self.car_data['mileage'] + 20000 or value['mileage'] < self.car_data['mileage'] - 20000:
-                continue
-
-            #acc_text = str(v['json_accident_repairs']).replace('\\', '').replace('"{', '{').replace('}"', '}')
-            accident_repairs = json.loads(value['json_accident_repairs'])
-            if len(accident_repairs['교환']) >= 3:
-                continue
-
-            for acc_index, acc_value in enumerate(accident_repairs['교환']):
-                if acc_value == "본넷":
+            if value['selective_price'] == 0:
+                if value['bidder'] < min_budder_count:
                     continue
 
+            if value['mileage'] > self.car_data['mileage'] + (max_mileage_limit * 10000) or value['mileage'] < self.car_data['mileage'] - (min_mileage_limit * 10000):
+                continue
+
             return_datas.append(db_datas[index])
+
+        if len(return_datas) != 0:
+            df_data_list = pd.DataFrame(return_datas)
+            df_data_list = df_data_list.sort_values('max_price')
+            return_datas = df_data_list.to_dict('records')
 
         return return_datas
 
