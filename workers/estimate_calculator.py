@@ -114,7 +114,7 @@ class EstimateCalculator(QThread):
                 except:
                     pass
                 
-                heyhealer_low_price_text = "2) " + str(db_low_data['max_price']) + " 만원 (데이터베이스)\n" + str(low_data['grade']) + "\n" + "출고가(옵션포함) : " + new_price_text + "\n" + str(low_data['years']) + "/" + str(db_low_data['month']) + " (" + str(db_low_data['car_years']) + "), " + str(db_low_data['mileage']) + " km, " + str(db_low_data['color']) + "\n" + str(db_low_data['accident']) + "\n(" + changed_count_text + sheeting_count_text + paint_count_text +")\n"+ damaged_count_text + "\n\n"
+                heyhealer_low_price_text = "2) " + str(db_low_data['max_price']) + " 만원 (데이터베이스)\n" + str(db_low_data['grade']) + "\n" + "출고가(옵션포함) : " + new_price_text + "\n" + str(db_low_data['years']) + "/" + str(db_low_data['month']) + " (" + str(db_low_data['car_years']) + "), " + str(db_low_data['mileage']) + " km, " + str(db_low_data['color']) + "\n" + str(db_low_data['accident']) + "\n(" + changed_count_text + sheeting_count_text + paint_count_text +")\n"+ damaged_count_text + "\n\n"
             else:
                 heyhealer_low_price_text = "2) 검색된 매물 0 개 (데이터베이스)\n\n"
 
