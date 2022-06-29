@@ -1,3 +1,4 @@
+from logging import warning
 from math import ceil, floor
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -12,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
+from sqlalchemy import null
 
 from workers.databaser import MySQL
 
@@ -80,19 +82,41 @@ class EstimateCalculator(QThread):
                 estimate_price = estimate_price_test1
             """
 
+            # 헤이딜러 자료 텍스트화.
             if len(data_list) > 0:
                 low_data = data_list[0]
-                heydealer_low_price_text = "1) " + str(low_data['max_price']) + " 만원 (헤이딜러 매입시세)\n" + str(low_data['bidder']) + " 명 입찰 (" + str(len(data_list)) + " 개의 데이터 중 최저가)\n" + str(low_data['years']) + "/" + str(low_data['month']) + " (" + str(low_data['car_years']) + "), " + str(low_data['mileage']) + " km, " + str(low_data['color']) + "\n" + str(low_data['accident']) + "\n\n"
+                heydealer_low_price_text = "1) " + str(low_data['max_price']) + " 만원 (헤이딜러 매입시세)\n" + str(low_data['grade']) + "\n" + str(low_data['bidder']) + " 명 입찰 (" + str(len(data_list)) + " 개의 데이터 중 최저가)\n" + str(low_data['years']) + "/" + str(low_data['month']) + " (" + str(low_data['car_years']) + "), " + str(low_data['mileage']) + " km, " + str(low_data['color']) + "\n" + str(low_data['accident']) + "\n\n"
             else:
-                heydealer_low_price_text = "1) 검색된 매물 0 개 (헤이딜러 매입시세)\n"
+                heydealer_low_price_text = "1) 검색된 매물 0 개 (헤이딜러 매입시세)\n\n"
 
-
+            # 데이터베이스 자료 텍스트화.
             if len(healer_db_list) > 0:
                 db_low_data = healer_db_list[0]
+
+                """ 사고 유무 (교환, 판금, 도색 갯수) """
+                json_acc_repairs = json.loads(db_low_data['json_accident_repairs'])
+                changed_count_text = "교환 : " + str(len(json_acc_repairs['교환'])) + " 개, "
+                sheeting_count_text = "판금 : " + str(len(json_acc_repairs['판금'])) + " 개, "
+                paint_count_text = "도색 : " + str(len(json_acc_repairs['도색'])) + " 개"
+
                 new_price_text = str(db_low_data['car_new_price']) + " 만원" if db_low_data['car_new_price'] > 0 else "신차가격정보 없음"
-                heyhealer_low_price_text = "2) " + str(db_low_data['max_price']) + " 만원 (데이터베이스)\n" + "출고가(옵션포함) : " + new_price_text + "\n" + str(low_data['years']) + "/" + str(db_low_data['month']) + " (" + str(db_low_data['car_years']) + "), " + str(db_low_data['mileage']) + " km, " + str(db_low_data['color']) + "\n" + str(db_low_data['accident']) + "\n\n"
+
+                """ 내차피해액 """
+                damaged_count_text = "내차피해액 : 없음"
+                damaged_count = 0
+                try:
+                    if db_low_data['json_my_car_damaged'] != None:
+                        json_my_car_damaged = json.loads(db_low_data['json_my_car_damaged'])
+                        for i, v in enumerate(json_my_car_damaged['수리비']):
+                            damaged_count = damaged_count + int(v)
+                        
+                        damaged_count_text = "내차피해액 : " + str(damaged_count) + " 만원\n"
+                except:
+                    pass
+                
+                heyhealer_low_price_text = "2) " + str(db_low_data['max_price']) + " 만원 (데이터베이스)\n" + str(low_data['grade']) + "\n" + "출고가(옵션포함) : " + new_price_text + "\n" + str(low_data['years']) + "/" + str(db_low_data['month']) + " (" + str(db_low_data['car_years']) + "), " + str(db_low_data['mileage']) + " km, " + str(db_low_data['color']) + "\n" + str(db_low_data['accident']) + "\n(" + changed_count_text + sheeting_count_text + paint_count_text +")\n"+ damaged_count_text + "\n\n"
             else:
-                heyhealer_low_price_text = "2) 검색된 매물 0 개 (데이터베이스)"
+                heyhealer_low_price_text = "2) 검색된 매물 0 개 (데이터베이스)\n\n"
 
             encar_price_text = "3) " + str(encar_low['price']) + " 만원 (엔카 최저가)\n" + str(encar_low['car_detail']) + "\n" + str(
                 encar_low['car_years']) + " , " + str(encar_low['mileage']) + " km, " + str(encar_low['color']) + "\n" + "교환: " + str(
@@ -101,11 +125,14 @@ class EstimateCalculator(QThread):
             alert_text = "경고) 내차피해 총액 {} 만원 초과 \n\n".format(
                 min_damage_price) if self.car_data['total_my_car_damage'] > min_damage_price else ""
 
+            warning_text = "** " + str(self.deductor(self.car_data)) + " 만원을 감가하고 입찰해주세요 **\n\n"
+
             e_text = alert_text + \
+                warning_text + \
                 heydealer_low_price_text + \
                 heyhealer_low_price_text + \
-                encar_price_text + \
-                "입찰시 감가해야할 금액) " + str(self.deductor(self.car_data)) + " 만원\n"
+                encar_price_text
+                
 
             # url 차량 정보 윈도우에 예상가 표시.
             self.estimate_price_signal.emit(0)
