@@ -133,12 +133,12 @@ class Crawler(QThread, QObject):
     def run(self):
 
         self.crawler_quit_signal_to_widget.emit(self.crawling_type, True)
-        
+
         while len(self.driver.window_handles) > 1 and self.is_crawler_working:
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                sleep(1)
-                self.driver.close()
-                sleep(1)
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+            sleep(1)
+            self.driver.close()
+            sleep(1)
 
         self.driver.switch_to.window(self.driver.window_handles[0])
         sleep(1)
@@ -182,7 +182,8 @@ class Crawler(QThread, QObject):
 
                 """ 페이지 스크롤 시작 """
 
-                max_wait_time = self.heyhealer_parent.wait_scroll_time  # 최대 대기시간.
+                # 최대 대기시간.
+                max_wait_time = self.heyhealer_parent.wait_scroll_time
 
                 driver = self.driver
                 driver.get(page_url)
@@ -885,8 +886,9 @@ class Crawler(QThread, QObject):
                         int(m_price)
                     my_car_damage_list.append(int(m_price))
 
-            pd_damaged = pd.DataFrame({"수리비": my_car_damage_list})
-            self.json_my_car_damaged = pd_damaged.to_json(force_ascii=False)
+            damaged_list = {"내차피해액": my_car_damage_list}
+            self.json_my_car_damaged = json.dumps(
+                damaged_list, ensure_ascii=False)
 
             # 타차가해 보험이력
             self.total_another_blow = 0
@@ -1000,7 +1002,8 @@ class Crawler(QThread, QObject):
                         WebDriverWait(self.driver, 5).until(EC.presence_of_element_located(
                             (By.XPATH, click_xpath))).click()
                         sleep(1)
-                        self.driver.switch_to.window(self.driver.window_handles[-1])
+                        self.driver.switch_to.window(
+                            self.driver.window_handles[-1])
                         sleep(1)
                     except:
                         pass

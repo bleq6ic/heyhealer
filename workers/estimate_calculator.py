@@ -107,8 +107,8 @@ class EstimateCalculator(QThread):
                 try:
                     if db_low_data['json_my_car_damaged'] != None:
                         json_my_car_damaged = json.loads(db_low_data['json_my_car_damaged'])
-                        for i, v in enumerate(json_my_car_damaged['수리비']):
-                            damaged_count = damaged_count + int(v)
+                        for i, v in enumerate(json_my_car_damaged['내차피해액']):
+                            damaged_count = damaged_count + v
                         
                         damaged_count_text = "내차피해액 : " + str(damaged_count) + " 만원"
                 except:
