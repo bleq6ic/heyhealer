@@ -103,6 +103,7 @@ class EstimateCalculator(QThread):
 
             e_text = alert_text + \
                 heydealer_low_price_text + \
+                heyhealer_low_price_text + \
                 encar_price_text + \
                 "입찰시 감가해야할 금액) " + str(self.deductor(self.car_data)) + " 만원\n"
 
