@@ -481,46 +481,30 @@ class EstimateCalculator(QThread):
 
         is_imported = self.isImported(self.car_data)
 
-        self.driver.get(self.car_data['url'])
+        try:
+            self.driver.get(self.car_data['url'])
 
-        page = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
-            (By.XPATH, '''//div[@class="_87edb25"]'''))).get_attribute('innerHTML')
-        self.soup = BeautifulSoup(page, 'html.parser')
+            page = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+                (By.XPATH, '''//div[@class="_87edb25"]'''))).get_attribute('innerHTML')
+            self.soup = BeautifulSoup(page, 'html.parser')
 
-        #WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//button[@class="css-zh51te"]'))).click()
-        click_element = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, '//button[@class="css-zh51te"]')))
-        self.driver.execute_script("arguments[0].click();", click_element)
-        sleep(1)
+            #WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//button[@class="css-zh51te"]'))).click()
+            click_element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//button[@class="css-zh51te"]')))
+            self.driver.execute_script("arguments[0].click();", click_element)
+            sleep(1)
 
-        while len(self.driver.window_handles) > 3:
+            while len(self.driver.window_handles) > 3:
+                self.driver.switch_to.window(self.driver.window_handles[-1])
+                sleep(1)
+                self.driver.close()
+                sleep(1)
+
             self.driver.switch_to.window(self.driver.window_handles[-1])
             sleep(1)
-            self.driver.close()
-            sleep(1)
 
-        self.driver.switch_to.window(self.driver.window_handles[-1])
-        sleep(1)
-
-        """
-        original_url = self.driver.current_url
-        if original_url.find('http://13.124.139.197/') != -1:
-            original_url = str(original_url).split('http://13.124.139.197/')[1]
-
-        if str(original_url).find('Year.range%28') != -1:
-            year_split = str(original_url).split('Year.range%28')[1]
-            year_split1 = str(year_split).split('%29')[0]
-            year_text = 'Year.range%28' + str(year_split1) + '%29'
-            new_url = str(original_url).replace(year_text, "Year.range%28{}..{}%29".format(
-                str(self.car_data['years']) + "01", str(self.car_data['car_years']) + "12"))
-            self.driver.get(new_url)
-            sleep(1)
-
-        if str(original_url).find('Mileage.range%28') != -1:
-            mileage_split = str(original_url).split('Mileage.range%28')[1]
-            mileage_split1 = str(mileage_split).split('%29')[0]
-            mileage_text = 'Mileage.range%28' + str(mileage_split1) + '%29'
-        """
+        except:
+            return None
 
         try:
             if is_imported == False:
