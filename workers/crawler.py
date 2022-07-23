@@ -976,7 +976,7 @@ class Crawler(QThread, QObject):
                         WebDriverWait(self.driver, 3).until(
                             EC.presence_of_element_located((By.XPATH, '//div[@class="css-giwk5h"]'))).click()
                         #self.driver.execute_script("arguments[0].click();", click_element)
-                        sleep(1)
+                        sleep(2)
                     except:
                         pass
                 elif self.auction_status == "경매종료":
